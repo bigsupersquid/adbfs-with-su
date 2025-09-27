@@ -1,4 +1,4 @@
-This variant of adbfs works even WITHOUT having root access (busybox) on your phone!
+This variant of adbfs is a workaround for root access to the device filesystem using su, for devices with no "adb root" due to a user build of ROM.
 
 Instructions:
 =============

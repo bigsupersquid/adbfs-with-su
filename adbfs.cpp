@@ -31,6 +31,10 @@
    device, etc.  Everything is very lightly tested and a work in
    progress.  Read the source and use with caution.
 
+   ################
+   note: modified to run with su-c, since it can tauntingly see, but not touch, the rooted filesystem.
+   and, yes, I realize it sounds silly to do it that way instead of "adb root", but yout know, production build...
+
 */
 
 /*
@@ -82,6 +86,9 @@
 #include <sys/types.h>
 #include <pwd.h>
 #include <grp.h>
+/*for quickly extracting filename from pushpull*/
+#include <string>
+#include <iostream>
 
 void handler(int sig) {
   void *array[10];
@@ -166,8 +173,8 @@ queue<string> adb_shell(const string& command, bool getStderr = false)
     string actual_command;
     actual_command.assign(command);
     //adb_shell_escape_command(actual_command);
-    actual_command.insert(0, "adb shell \"");
-    actual_command.append("\"");
+    actual_command.insert(0, "adb shell \" su -c '");
+    actual_command.append("'\"");
     if (getStderr) actual_command.append(" 2>&1");
     return exec_command(actual_command);
 }
@@ -283,11 +290,41 @@ void adb_push_pull_cmd(string& cmd, const bool push,
    @todo perhaps avoid or simplify shell-escaping.
    @bug problems with files with spaces in filenames (adb bug?)
  */
+/* original code, maybe I'll put a command line option eventually
 queue<string> adb_pull(const string& remote_source,
 		       const string& local_destination)
 {
     string cmd;
     adb_push_pull_cmd(cmd, false, local_destination, remote_source);
+    return exec_command(cmd);
+}
+*/
+queue<string> adb_pull(const string& remote_source,
+		       const string& local_destination)
+{
+    string cmd;
+    string remotename;
+    /*first thing, gimme filename*/
+    size_t pos = remote_source.find_last_of('/');
+    if (pos != string::npos) {
+        remotename = remote_source.substr(pos);  // Includes '/' and everything a>
+    } else {
+       remotename = remote_source;  // No '/' found, use full path
+    }
+
+     /* pull = copy, pull */
+     cmd.assign("adb shell mkdir /sdcard/adbfs");
+     exec_command(cmd);
+     cmd.assign("adb shell su -c 'cp -f ");
+     cmd.append(remote_source);
+     cmd.append(" /sdcard/adbfs/");
+     cmd.append(remotename);
+     cmd.append("'");
+     exec_command(cmd);
+     cmd.assign("adb pull /sdcard/adbfs/");
+     cmd.append(remotename);
+     cmd.append(" ");
+     cmd.append(local_destination);
     return exec_command(cmd);
 }
 
@@ -299,6 +336,7 @@ queue<string> adb_pull(const string& remote_source,
    @see adb_push_pull_cmd.
    @bug problems with files with spaces in filenames (adb bug?)
  */
+/* original code, maybe I'll put a command line option eventually
 queue<string> adb_push(const string& local_source,
 		       const string& remote_destination)
 {
@@ -306,6 +344,39 @@ queue<string> adb_push(const string& local_source,
     adb_push_pull_cmd(cmd, true, local_source, remote_destination);
     queue<string> res = exec_command(cmd);
     invalidateCache(remote_destination);
+    return res;
+}
+*/
+queue<string> adb_push(const string& local_source,
+		       const string& remote_destination)
+{
+    string cmd;
+    string localname;
+    string tmp_dest;
+    /*first thing, gimme filename*/
+    size_t pos = local_source.find_last_of('/');
+    if (pos != string::npos) {
+        localname = local_source.substr(pos);  // Includes '/' and everything aft>
+    } else {
+        localname = local_source;  // No '/' found, use full path
+    }
+     /* push = push, copy */
+     cmd.assign("adb shell mkdir /sdcard/adbfs");
+     exec_command(cmd);
+     cmd.assign("adb push ");
+     cmd.append(local_source);
+     cmd.append(" /sdcard/adbfs/");
+     cmd.append(localname);
+    queue<string> res = exec_command(cmd);
+     cmd.assign("adb shell su -c 'cp -f /sdcard/adbfs/");
+     cmd.append(localname);
+     cmd.append(" ");
+     cmd.append(remote_destination);
+     cmd.append("'");
+     exec_command(cmd);
+     cmd.assign("/sdcard/adbfs/");
+     cmd.append(localname);
+    invalidateCache(cmd);
     return res;
 }
 
