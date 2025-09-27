@@ -1,6 +1,43 @@
 This variant of adbfs is a workaround for root access to the device filesystem using su, for devices with no "adb root" due to a user build of ROM.
 
-Instructions:
+WARNING ACHTUNG ETC
+
+How to Not Nuke Your Device With This (Mostly)
+
+#### 1. **Mount Read-Only by Default**
+When testing, mount your `adbfs-with-su` variant with `-o ro`:
+```bash
+./adbfs -o ro /mnt/phone
+```
+Only switch to `-o rw` when you *know* what you’re doing.
+
+#### 2. **Use a Wrapper Script**
+```bash
+#!/bin/bash
+echo "WARNING: This is RW. Ctrl+C in 3 seconds..."
+sleep 3
+./adbfs -o rw,allow_other /mnt/phone
+```
+
+#### 3. **Backup Key Dirs First**
+Before poking around:
+```bash
+adb pull /data/system ~/_backup-data-system
+adb pull /data/misc/wifi ~/_backup-wifi
+adb pull /data/adb/magisk.db ~/_backup-magisk
+```
+
+#### 4. **Test in `/data/local/tmp` First**
+It’s your **sandbox**. Write, break, delete — no harm done.
+
+#### 5. **Don’t `chown -R 0:0 /data`**
+I don’t know why you’d do it.
+But someone, somewhere, will.
+And their phone will never boot again.
+
+
+
+Actual Instructions:
 =============
 
 ## Ubuntu
