@@ -22,10 +22,18 @@ sleep 3
 #### 3. **Backup Key Dirs First**
 Before poking around:
 ```bash
-adb pull /data/system ~/_backup-data-system
-adb pull /data/misc/wifi ~/_backup-wifi
-adb pull /data/adb/magisk.db ~/_backup-magisk
+adb shell "su -c 'tar -cf - /data/system'" > backup-data-system.tar
+
+adb shell "su -c 'tar -cf - /daaa/misc/wifi'" > backup-wifi.tar
+
+adb shell "su -c 'tar -cf - /data/adb/magisk.db" > backup-magisk.tar 
 ```
+you can put them back with 
+```bash
+cat backup.tar | adb shell "su -c 'tar -xf - -C /'"
+```
+This extracts exactly where the file was originally (e.g., `/data/data/...`).
+> To extract to a different location, change the `-C /` to `-C /target/dir`.
 
 #### 4. **Test in `/data/local/tmp` First**
 It’s your **sandbox**. Write, break, delete — no harm done.
